@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
@@ -38,6 +38,36 @@ export default function App() {
       date: new Date(Date.now() - 259200000).toISOString()
     }
   ]);
+
+  // Sync notes from PostgreSQL database backend on mount
+  useEffect(() => {
+    fetch('http://localhost:3000/api/notes')
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch notes from DB');
+        return res.json();
+      })
+      .then(dbNotes => {
+        if (dbNotes && dbNotes.length > 0) {
+          const formattedDbNotes = dbNotes.map(n => ({
+            id: String(n.id),
+            name: n.title,
+            size: 'Database file',
+            timestamp: 'From DB',
+            status: 'completed',
+            ...generateStudyData(n.title),
+            date: new Date().toISOString()
+          }));
+          setNotes(prev => {
+            const existingIds = new Set(prev.map(item => item.id));
+            const newItems = formattedDbNotes.filter(item => !existingIds.has(item.id));
+            return [...newItems, ...prev];
+          });
+        }
+      })
+      .catch(err => {
+        console.log('Database notes sync notice:', err.message);
+      });
+  }, []);
 
   const renderContent = () => {
     switch (activeTab) {

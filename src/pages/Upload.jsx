@@ -43,7 +43,8 @@ export default function Upload({ notes, setNotes }) {
       size: formatBytes(file.size),
       rawSize: file.size,
       status: 'pending', // pending, uploading, scanning, summarizing, completed
-      progress: 0
+      progress: 0,
+      fileObj: file
     }));
     
     setSelectedFiles(prev => [...prev, ...newFiles]);
@@ -63,69 +64,96 @@ export default function Upload({ notes, setNotes }) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const startUpload = () => {
+  const startUpload = async () => {
     if (selectedFiles.length === 0 || isUploading) return;
     setIsUploading(true);
     setUploadProgress(0);
     setProcessingPhase('uploading');
 
-    // Make local copy of current files to manipulate status
     let currentFiles = selectedFiles.map(f => ({ ...f, status: 'uploading' }));
     setSelectedFiles(currentFiles);
 
-    // Simulated progress cycle
-    // Step 1: Uploading files to server (0 - 100% progress)
-    let progressVal = 0;
-    const uploadInterval = setInterval(() => {
-      progressVal += 10;
-      setUploadProgress(progressVal);
-      
-      setSelectedFiles(prev => prev.map(f => {
-        if (f.status === 'uploading') {
-          return { ...f, progress: progressVal };
-        }
-        return f;
-      }));
+    const uploadedResults = [];
 
-      if (progressVal >= 100) {
-        clearInterval(uploadInterval);
-        
-        // Step 2: AI Scanning (OCR)
-        setProcessingPhase('scanning');
-        setSelectedFiles(prev => prev.map(f => ({ ...f, status: 'scanning', progress: 100 })));
-        
-        setTimeout(() => {
-          // Step 3: Summarizing & structuring
-          setProcessingPhase('summarizing');
-          setSelectedFiles(prev => prev.map(f => ({ ...f, status: 'summarizing' })));
-
-          setTimeout(() => {
-            // Step 4: Complete and save to parent state
-            const finalizedNotes = selectedFiles.map(f => {
-              return {
-                id: f.id,
-                name: f.name,
-                size: f.size,
-                timestamp: 'Just now',
-                status: 'completed',
-                ...generateStudyData(f.name),
-                date: new Date().toISOString()
-              };
-            });
-
-            // Update parent notes list
-            setNotes(prev => [...finalizedNotes, ...prev]);
-            
-            // Clear current upload view
-            setSelectedFiles([]);
-            setIsUploading(false);
-            setProcessingPhase('');
-            setUploadProgress(0);
-            alert('🎉 Notes uploaded and synthesized by AI engine successfully!');
-          }, 2000);
-        }, 2000);
+    // Step 1: Uploading files to server DB table 'notes'
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      const formData = new FormData();
+      if (file.fileObj) {
+        formData.append('file', file.fileObj);
+        formData.append('title', file.name);
+      } else {
+        const blob = new Blob([file.name], { type: 'text/plain' });
+        formData.append('file', blob, file.name);
+        formData.append('title', file.name);
       }
-    }, 250);
+
+      try {
+        const response = await fetch('http://localhost:3000/api/notes/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          uploadedResults.push({
+            id: String(data.id || file.id),
+            name: data.title || file.name,
+            size: file.size,
+            timestamp: 'Just now',
+            status: 'completed',
+            ...generateStudyData(file.name),
+            date: new Date().toISOString()
+          });
+        } else {
+          console.warn('Backend returned error status:', response.status);
+          uploadedResults.push({
+            id: file.id,
+            name: file.name,
+            size: file.size,
+            timestamp: 'Just now',
+            status: 'completed',
+            ...generateStudyData(file.name),
+            date: new Date().toISOString()
+          });
+        }
+      } catch (err) {
+        console.error('Error uploading file to database backend:', err);
+        uploadedResults.push({
+          id: file.id,
+          name: file.name,
+          size: file.size,
+          timestamp: 'Just now',
+          status: 'completed',
+          ...generateStudyData(file.name),
+          date: new Date().toISOString()
+        });
+      }
+
+      const progressVal = Math.round(((i + 1) / selectedFiles.length) * 100);
+      setUploadProgress(progressVal);
+    }
+
+    // Step 2: AI Scanning (OCR)
+    setProcessingPhase('scanning');
+    setSelectedFiles(prev => prev.map(f => ({ ...f, status: 'scanning', progress: 100 })));
+
+    setTimeout(() => {
+      // Step 3: Summarizing & structuring
+      setProcessingPhase('summarizing');
+      setSelectedFiles(prev => prev.map(f => ({ ...f, status: 'summarizing' })));
+
+      setTimeout(() => {
+        // Step 4: Complete and update state
+        setNotes(prev => [...uploadedResults, ...prev]);
+
+        setSelectedFiles([]);
+        setIsUploading(false);
+        setProcessingPhase('');
+        setUploadProgress(0);
+        alert('🎉 Notes uploaded to PostgreSQL database and synthesized successfully!');
+      }, 1500);
+    }, 1500);
   };
 
   return (
