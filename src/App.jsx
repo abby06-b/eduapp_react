@@ -1,0 +1,85 @@
+import React, { useState } from 'react';
+import Sidebar from './components/Sidebar';
+import Home from './pages/Home';
+import Upload from './pages/Upload';
+import Analytics from './pages/Analytics';
+import Leaderboard from './pages/Leaderboard';
+import { generateStudyData } from './utils/studyGenerator';
+import './App.css';
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('home');
+  const [notes, setNotes] = useState([
+    { 
+      id: '1', 
+      name: 'Machine_Learning_Lec1.pdf', 
+      size: '2.4 MB', 
+      timestamp: '2 hours ago', 
+      status: 'completed',
+      ...generateStudyData('Machine_Learning_Lec1.pdf'),
+      date: new Date(Date.now() - 7200000).toISOString()
+    },
+    { 
+      id: '2', 
+      name: 'Organic_Chemistry_Hydrocarbons.docx', 
+      size: '1.8 MB', 
+      timestamp: '1 day ago', 
+      status: 'completed',
+      ...generateStudyData('Organic_Chemistry_Hydrocarbons.docx'),
+      date: new Date(Date.now() - 86400000).toISOString()
+    },
+    { 
+      id: '3', 
+      name: 'Macroeconomics_Inflation_Notes.pdf', 
+      size: '4.1 MB', 
+      timestamp: '3 days ago', 
+      status: 'completed',
+      ...generateStudyData('Macroeconomics_Inflation_Notes.pdf'),
+      date: new Date(Date.now() - 259200000).toISOString()
+    }
+  ]);
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'home':
+        return <Home notes={notes} setActiveTab={setActiveTab} />;
+      case 'upload':
+        return <Upload notes={notes} setNotes={setNotes} />;
+      case 'analytics':
+        return <Analytics notes={notes} />;
+      case 'leaderboard':
+        return <Leaderboard />;
+      default:
+        return <Home notes={notes} setActiveTab={setActiveTab} />;
+    }
+  };
+
+  return (
+    <div className="app-container">
+      {/* Decorative Grid Watermark Background */}
+      <div className="grid-bg-pattern" />
+
+      {/* SVG Gradients for Custom SVG Charts (Injected once here to be used globally) */}
+      <svg style={{ position: 'absolute', width: 0, height: 0 }} aria-hidden="true">
+        <defs>
+          <linearGradient id="uploadsGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--primary-light)" />
+            <stop offset="100%" stopColor="var(--primary)" />
+          </linearGradient>
+          <linearGradient id="hoursGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--secondary-light)" />
+            <stop offset="100%" stopColor="var(--secondary)" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* Navigation Sidebar */}
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Main Content Area */}
+      <main className="main-content">
+        {renderContent()}
+      </main>
+    </div>
+  );
+}
