@@ -39,22 +39,22 @@ export default function App() {
     }
   ]);
 
-  // Sync notes from PostgreSQL database backend on mount
+  // Sync notes/reels from PostgreSQL database backend on mount
   useEffect(() => {
-    fetch('http://localhost:3000/api/notes')
+    fetch('https://edureel-backend-o33b.onrender.com/api/reels')
       .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch notes from DB');
+        if (!res.ok) throw new Error('Failed to fetch reels from DB');
         return res.json();
       })
       .then(dbNotes => {
         if (dbNotes && dbNotes.length > 0) {
           const formattedDbNotes = dbNotes.map(n => ({
             id: String(n.id),
-            name: n.title,
+            name: n.title || n.filename,
             size: 'Database file',
             timestamp: 'From DB',
             status: 'completed',
-            ...generateStudyData(n.title),
+            ...generateStudyData(n.title || n.filename),
             date: new Date().toISOString()
           }));
           setNotes(prev => {
@@ -65,7 +65,7 @@ export default function App() {
         }
       })
       .catch(err => {
-        console.log('Database notes sync notice:', err.message);
+        console.log('Database reels sync notice:', err.message);
       });
   }, []);
 

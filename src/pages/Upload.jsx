@@ -89,16 +89,17 @@ export default function Upload({ notes, setNotes }) {
       }
 
       try {
-        const response = await fetch('http://localhost:3000/api/notes/upload', {
+        const response = await fetch('https://edureel-backend-o33b.onrender.com/api/upload', {
           method: 'POST',
           body: formData
         });
 
         if (response.ok) {
           const data = await response.json();
+          const dbItem = data.dbResult || data;
           uploadedResults.push({
-            id: String(data.id || file.id),
-            name: data.title || file.name,
+            id: String(dbItem.id || data.id || file.id),
+            name: dbItem.title || dbItem.filename || data.title || file.name,
             size: file.size,
             timestamp: 'Just now',
             status: 'completed',
@@ -182,7 +183,7 @@ export default function Upload({ notes, setNotes }) {
               multiple 
               onChange={handleFileChange}
               disabled={isUploading}
-              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx"
+              accept=".pdf,.doc,.docx,.txt,.ppt,.pptx,.mp4,.mov,.avi,.mkv,video/*"
             />
             
             <div className="drop-content">
