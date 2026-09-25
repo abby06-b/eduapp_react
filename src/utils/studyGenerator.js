@@ -1,5 +1,5 @@
 // Dynamic Study Generator utilizing Retrieval-Augmented Generation (RAG) modeling.
-// Generates detailed summaries, source text chunks (contextual database), quizzes with source citations, 
+// Generates detailed summaries, source text chunks (contextual database), 5-question quizzes with source citations, 
 // and pre-computed Q&A indices simulating search queries over document context.
 
 export function generateStudyData(filename) {
@@ -16,7 +16,6 @@ export function generateStudyData(filename) {
         "Key Takeaway 1: React hooks and props manage stateful reactivities, where state changes trigger child component re-renders.",
         "Key Takeaway 2: Machine learning algorithms classify into supervised (labeled mapping) or unsupervised (pattern clustering) categories."
       ],
-      // Grounded source passages simulating document chunks extracted by OCR
       sourceChunks: [
         {
           id: "cs-chunk-1",
@@ -34,7 +33,7 @@ export function generateStudyData(filename) {
           text: "Algorithmic time complexity measures the growth rate of computational operations relative to input size (n). The ideal is constant time complexity O(1), where actions execute in identical steps regardless of input scaling, whereas quadratic complexity O(n²) indicates nested iteration loops."
         }
       ],
-      // Quizzes grounded in retrieved chunks
+      // 5-Question Quiz grounded in retrieved chunks
       quiz: [
         {
           q: "What is the key characteristic that distinguishes supervised learning from unsupervised learning?",
@@ -56,15 +55,27 @@ export function generateStudyData(filename) {
           correct: 3,
           citation: "Page 3, Paragraph 4",
           excerpt: "Quadratic complexity O(n²) indicates nested iteration loops, showing operations grow proportionally to the square of input size."
+        },
+        {
+          q: "What is the primary role of component state in modern front-end web applications?",
+          a: ["To compile raw backend source code into web assembly binaries", "To store dynamic user data whose changes automatically trigger UI re-renders", "To compress image files before sending them to web server storage", "To replace CSS stylesheets with inline inline styles"],
+          correct: 1,
+          citation: "Page 2, Paragraph 3",
+          excerpt: "React hooks and props manage stateful reactivities, where state changes trigger child component re-renders."
+        },
+        {
+          q: "Which neural network architecture is explicitly designed for processing sequential data like text or speech?",
+          a: ["Convolutional Neural Networks (CNN)", "Recurrent Neural Networks (RNN) & Transformers", "Generative Adversarial Networks (GAN)", "Decision Trees"],
+          correct: 1,
+          citation: "Page 4, Paragraph 2",
+          excerpt: "Recurrent architectures and Transformer attention modules maintain sequential context across input tokens."
         }
       ],
-      // Suggested queries for Q&A search
       suggestedQueries: [
         "Explain how the Virtual DOM works.",
         "What is the difference between supervised and unsupervised learning?",
         "What does O(n²) mean in terms of scaling?"
       ],
-      // RAG QA database simulating query execution
       queryAnswers: {
         "Explain how the Virtual DOM works.": {
           answer: "The Virtual DOM is React's local representation of the real DOM. When a component's state changes, React builds a new Virtual DOM tree and diffs it with the old one (a process called reconciliation). It then calculates the most efficient way to patch the actual browser DOM to match, saving valuable execution time.",
@@ -135,6 +146,20 @@ export function generateStudyData(filename) {
           correct: 2,
           citation: "Page 4, Paragraph 1",
           excerpt: "A catalyst provides an alternative reaction mechanism with a lower activation energy (Ea) compared to the uncatalyzed reaction."
+        },
+        {
+          q: "What defines a Bronsted-Lowry acid in chemical reactions?",
+          a: ["An electron-pair acceptor", "A proton (H+) donor", "A hydroxide (OH-) donor", "A neutral solvent"],
+          correct: 1,
+          citation: "Page 5, Paragraph 2",
+          excerpt: "According to the Bronsted-Lowry theory, an acid is any chemical species capable of donating a proton (H+) to another species."
+        },
+        {
+          q: "What is the primary difference between exothermic and endothermic chemical processes?",
+          a: ["Exothermic releases heat (ΔH < 0), while endothermic absorbs heat (ΔH > 0)", "Exothermic requires constant light energy, while endothermic creates electricity", "Exothermic reactions only occur in vacuum chambers", "Endothermic reactions cannot be catalyzed"],
+          correct: 0,
+          citation: "Page 6, Paragraph 1",
+          excerpt: "Exothermic processes release thermal energy into surroundings (negative enthalpy change), whereas endothermic reactions absorb heat."
         }
       ],
       suggestedQueries: [
@@ -212,6 +237,20 @@ export function generateStudyData(filename) {
           correct: 2,
           citation: "Page 3, Paragraph 5",
           excerpt: "Active transport requires ATP energy, utilizing membrane proteins... to move molecules against concentration gradients."
+        },
+        {
+          q: "Which organelle is recognized as the powerhouse of eukaryotic cells responsible for ATP synthesis?",
+          a: ["Golgi Apparatus", "Mitochondrion", "Endoplasmic Reticulum", "Peroxisome"],
+          correct: 1,
+          citation: "Page 1, Paragraph 4",
+          excerpt: "Pyruvate molecules enter the mitochondrial matrix to power oxidative phosphorylation and generate ATP."
+        },
+        {
+          q: "Which type of RNA delivers specific amino acids to the ribosome during protein translation?",
+          a: ["Messenger RNA (mRNA)", "Transfer RNA (tRNA)", "Ribosomal RNA (rRNA)", "Small Nuclear RNA (snRNA)"],
+          correct: 1,
+          citation: "Page 2, Paragraph 3",
+          excerpt: "Transfer RNA (tRNA) molecules match mRNA anticodons, delivering corresponding amino acids into growing polypeptide chains."
         }
       ],
       suggestedQueries: [
@@ -289,6 +328,20 @@ export function generateStudyData(filename) {
           correct: 2,
           citation: "Page 3, Paragraph 2",
           excerpt: "The law of conservation of energy states that the total energy of an isolated system remains constant over time. Energy cannot be created or destroyed..."
+        },
+        {
+          q: "What unit measures electrical potential difference across two points in a circuit?",
+          a: ["Ampere (A)", "Volt (V)", "Ohm (Ω)", "Watt (W)"],
+          correct: 1,
+          citation: "Page 4, Paragraph 1",
+          excerpt: "Electric potential difference, measured in Volts (V), represents the energy required to move a unit charge between points."
+        },
+        {
+          q: "What operation is the fundamental inverse of differentiation according to the Fundamental Theorem of Calculus?",
+          a: ["Matrix multiplication", "Integration (Anti-derivative)", "Polynomial factoring", "Logarithmic expansion"],
+          correct: 1,
+          citation: "Page 5, Paragraph 3",
+          excerpt: "The Fundamental Theorem of Calculus establishes that integration and differentiation are inverse mathematical operations."
         }
       ],
       suggestedQueries: [
@@ -366,6 +419,20 @@ export function generateStudyData(filename) {
           correct: 1,
           citation: "Page 4, Paragraph 2",
           excerpt: "Article 231 (the War Guilt Clause) placed absolute blame on Germany, demanding 132 billion gold marks in reparations."
+        },
+        {
+          q: "Which major geopolitical division characterized global relations during the Cold War era?",
+          a: ["Bipolar rivalry between NATO Western allies and Warsaw Pact Eastern bloc", "Trade disputes between South American nations", "Feudal rivalries between European monarchies", "Monetary wars between Asian dynasties"],
+          correct: 0,
+          citation: "Page 5, Paragraph 1",
+          excerpt: "The Cold War pitted Western capitalist democratic nations against Soviet socialist republics in ideological and strategic rivalries."
+        },
+        {
+          q: "Which ancient Mesopotamian civilization created the earliest known written language system (Cuneiform)?",
+          a: ["Sumerians", "Phoenicians", "Hittites", "Persians"],
+          correct: 0,
+          citation: "Page 6, Paragraph 3",
+          excerpt: "Sumerian scribes in ancient Mesopotamia developed cuneiform script around 3400 BC using reed styluses on clay tablets."
         }
       ],
       suggestedQueries: [
@@ -443,6 +510,20 @@ export function generateStudyData(filename) {
           correct: 1,
           citation: "Page 3, Paragraph 3",
           excerpt: "It is governed by the accounting equation: Assets = Liabilities + Owner's Equity."
+        },
+        {
+          q: "What does Gross Domestic Product (GDP) measure within an economic territory?",
+          a: ["Total stock market capitalization value", "Total market value of all final goods and services produced in a specific period", "Total money held in commercial bank reserves", "Net international import tariff balances"],
+          correct: 1,
+          citation: "Page 4, Paragraph 2",
+          excerpt: "GDP quantifies total economic output by summing all final goods and services produced domestically."
+        },
+        {
+          q: "What central banking policy is typically implemented to control rapid inflationary pressure?",
+          a: ["Lowering interest rates to stimulate spending", "Raising benchmark interest rates to cool aggregate borrowing", "Abolishing central reserve requirements", "Increasing government deficit grants"],
+          correct: 1,
+          citation: "Page 5, Paragraph 1",
+          excerpt: "Central banks tighten monetary policy by elevating interest rates, increasing borrowing costs to temper inflation."
         }
       ],
       suggestedQueries: [
@@ -473,7 +554,7 @@ export function generateStudyData(filename) {
     };
   }
 
-  // 7. GENERIC FALLBACK (Dynamically structures RAG chunks based on filename words)
+  // 7. GENERIC FALLBACK (Dynamically structures 5 RAG chunks & 5 questions based on filename)
   return {
     summary: `This research brief covers core themes and structural definitions relating to "${capitalizedSubject}". It reviews foundational theories, operational workflows, and active recall studies within this specific discipline.`,
     bullets: [
@@ -519,6 +600,20 @@ export function generateStudyData(filename) {
         correct: 1,
         citation: "Page 3, Paragraph 1",
         excerpt: "RAG merges document context retrieval with text generation... showing exact page references alongside answers guarantees that study assessments are anchored in verified source material."
+      },
+      {
+        q: `Which approach ensures maximum knowledge retention when studying "${cleanName}"?`,
+        a: ["Skimming headers once before examination", "Combining structured topic summaries with self-testing active recall quizzes", "Relying purely on mechanical memorization without context", "Translating text into unstructured bullet lists"],
+        correct: 1,
+        citation: "Page 2, Paragraph 4",
+        excerpt: "Combining structured topic summaries with active recall practice solidifies conceptual retention."
+      },
+      {
+        q: `What role do source citations play when reviewing AI-generated notes for "${cleanName}"?`,
+        a: ["They increase document file size", "They provide verifiable trace links back to primary text passages to eliminate inaccuracies", "They prevent students from taking notes", "They force automatic translation of documents"],
+        correct: 1,
+        citation: "Page 3, Paragraph 1",
+        excerpt: "Showing exact page references alongside answers guarantees that study assessments are anchored in verified source material."
       }
     ],
     suggestedQueries: [

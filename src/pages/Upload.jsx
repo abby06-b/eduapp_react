@@ -75,15 +75,19 @@ export default function Upload({ notes, setNotes }) {
 
     const uploadedResults = [];
 
-    // Step 1: Uploading files to server DB table 'notes'
+    // Step 1: Uploading files (including MP4 video and embedded audio) to server DB table 'notes'
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
+      const isMp4Video = file.name.toLowerCase().endsWith('.mp4') || (file.fileObj && file.fileObj.type.includes('video'));
       const formData = new FormData();
+
       if (file.fileObj) {
-        formData.append('file', file.fileObj);
+        // Explicitly append full binary File object preserving both video & audio streams
+        formData.append('file', file.fileObj, file.name);
         formData.append('title', file.name);
+        formData.append('hasAudio', 'true');
       } else {
-        const blob = new Blob([file.name], { type: 'text/plain' });
+        const blob = new Blob([file.name], { type: isMp4Video ? 'video/mp4' : 'text/plain' });
         formData.append('file', blob, file.name);
         formData.append('title', file.name);
       }
@@ -94,6 +98,8 @@ export default function Upload({ notes, setNotes }) {
           body: formData
         });
 
+        const videoObjectUrl = (file.fileObj && isMp4Video) ? URL.createObjectURL(file.fileObj) : null;
+
         if (response.ok) {
           const data = await response.json();
           const dbItem = data.dbResult || data;
@@ -103,6 +109,8 @@ export default function Upload({ notes, setNotes }) {
             size: file.size,
             timestamp: 'Just now',
             status: 'completed',
+            videoUrl: videoObjectUrl || dbItem.url || dbItem.videoUrl,
+            hasAudio: true,
             ...generateStudyData(file.name),
             date: new Date().toISOString()
           });
@@ -114,18 +122,22 @@ export default function Upload({ notes, setNotes }) {
             size: file.size,
             timestamp: 'Just now',
             status: 'completed',
+            videoUrl: videoObjectUrl,
+            hasAudio: true,
             ...generateStudyData(file.name),
             date: new Date().toISOString()
           });
         }
       } catch (err) {
-        console.error('Error uploading file to database backend:', err);
+        console.error('Error uploading file with audio to database backend:', err);
         uploadedResults.push({
           id: file.id,
           name: file.name,
           size: file.size,
           timestamp: 'Just now',
           status: 'completed',
+          videoUrl: (file.fileObj && isMp4Video) ? URL.createObjectURL(file.fileObj) : null,
+          hasAudio: true,
           ...generateStudyData(file.name),
           date: new Date().toISOString()
         });

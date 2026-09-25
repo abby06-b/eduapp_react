@@ -189,6 +189,28 @@
   color: var(--text-muted);
 }
 
+.btn-logout-sidebar {
+  margin-left: auto;
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+  color: #f43f5e;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-logout-sidebar:hover {
+  background: #f43f5e;
+  border-color: #f43f5e;
+  color: white;
+  transform: translateY(-1px);
+}
+
 /* Progress bar inside Footer */
 .level-bar-container {
   display: flex;

@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Home, UploadCloud, BarChart3, Trophy, GraduationCap, Sparkles, Menu, X, User, ShieldAlert } from 'lucide-react';
+import { Home, UploadCloud, FileVideo, BarChart3, Trophy, GraduationCap, Sparkles, Menu, X, User, LogOut } from 'lucide-react';
 import './Sidebar.css';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, user, onLogout }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'upload', label: 'Upload Notes', icon: UploadCloud },
+    { id: 'json-to-mp4', label: 'JSON ➔ MP4', icon: FileVideo },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
   ];
@@ -73,9 +74,14 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               <div className="avatar-badge" />
             </div>
             <div className="user-info">
-              <h4 className="user-name">Alex Johnson</h4>
+              <h4 className="user-name">{user?.username || 'test123'}</h4>
               <p className="user-role">Pro Scholar</p>
             </div>
+            {onLogout && (
+              <button className="btn-logout-sidebar" onClick={onLogout} title="Log Out">
+                <LogOut size={16} />
+              </button>
+            )}
           </div>
           <div className="level-bar-container">
             <div className="level-info">

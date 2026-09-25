@@ -2,12 +2,23 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Home from './pages/Home';
 import Upload from './pages/Upload';
+import JsonToMp4 from './pages/JsonToMp4';
 import Analytics from './pages/Analytics';
 import Leaderboard from './pages/Leaderboard';
+import Login from './pages/Login';
 import { generateStudyData } from './utils/studyGenerator';
 import './App.css';
 
 export default function App() {
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('edulearn_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [activeTab, setActiveTab] = useState('home');
   const [notes, setNotes] = useState([
     { 
@@ -50,6 +61,8 @@ export default function App() {
         if (dbNotes && dbNotes.length > 0) {
           const formattedDbNotes = dbNotes.map(n => ({
             id: String(n.id),
+            dbId: n.id,
+            reelId: n.id,
             name: n.title || n.filename,
             size: 'Database file',
             timestamp: 'From DB',
@@ -69,12 +82,27 @@ export default function App() {
       });
   }, []);
 
+  const handleLoginSuccess = (userData) => {
+    setUser(userData);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('edulearn_user');
+    setUser(null);
+  };
+
+  if (!user) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
         return <Home notes={notes} setActiveTab={setActiveTab} />;
       case 'upload':
         return <Upload notes={notes} setNotes={setNotes} />;
+      case 'json-to-mp4':
+        return <JsonToMp4 setNotes={setNotes} />;
       case 'analytics':
         return <Analytics notes={notes} />;
       case 'leaderboard':
@@ -104,7 +132,7 @@ export default function App() {
       </svg>
 
       {/* Navigation Sidebar */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} user={user} onLogout={handleLogout} />
 
       {/* Main Content Area */}
       <main className="main-content">
