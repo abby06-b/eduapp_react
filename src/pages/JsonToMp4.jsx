@@ -536,11 +536,71 @@ export default function JsonToMp4({ setNotes }) {
   };
 
   /**
-   * STREAMS NATURAL SPOKEN HUMAN TTS VOICE DIRECTLY INTO WEBAUDIO DESTINATION & MEDIARECORDER
-   * Fetches real human speech MP3 audio for narration text and decodes it into Web Audio PCM,
-   * piping the human voice stream directly into destNode so the recorded MP4 file contains REAL SPOKEN HUMAN VOICE WORDS!
+   * PRE-FETCHES AND PRE-DECODES HUMAN TTS SPEECH MP3 AUDIO BUFFERS INTO MEMORY
+   * Eliminates network delay during MediaRecorder encoding so TTS plays INSTANTLY at t = 0.0s!
    */
-  const playSpeechAudioTrackAsync = async (text, audioCtx, destNode, isMuted) => {
+  const fetchAndDecodeAudioBuffer = async (text, audioCtx) => {
+    if (!text || !String(text).trim() || !audioCtx) return null;
+    const cleanText = String(text).replace(/[\r\n]+/g, ' ').trim();
+    const chunks = splitTextIntoChunks(cleanText, 130);
+    const audioBuffers = [];
+
+    for (let c = 0; c < chunks.length; c++) {
+      const chunkText = chunks[c];
+      if (!chunkText) continue;
+
+      try {
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunkText)}&tl=en&client=tw-ob`;
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(googleUrl)}`;
+
+        const response = await fetch(proxyUrl);
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          if (arrayBuffer && arrayBuffer.byteLength > 200) {
+            const audioBuffer = await new Promise((resolve, reject) => {
+              audioCtx.decodeAudioData(arrayBuffer.slice(0), resolve, reject);
+            });
+            if (audioBuffer) {
+              audioBuffers.push(audioBuffer);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('TTS prefetch chunk notice:', err);
+      }
+    }
+
+    if (audioBuffers.length === 0) return null;
+    if (audioBuffers.length === 1) return audioBuffers[0];
+
+    try {
+      const totalLength = audioBuffers.reduce((acc, b) => acc + b.length, 0);
+      const numberOfChannels = audioBuffers[0].numberOfChannels;
+      const sampleRate = audioBuffers[0].sampleRate;
+      const combinedBuffer = audioCtx.createBuffer(numberOfChannels, totalLength, sampleRate);
+
+      let offset = 0;
+      for (const b of audioBuffers) {
+        for (let channel = 0; channel < numberOfChannels; channel++) {
+          combinedBuffer.getChannelData(channel).set(b.getChannelData(channel), offset);
+        }
+        offset += b.length;
+      }
+      return combinedBuffer;
+    } catch (e) {
+      return audioBuffers[0];
+    }
+  };
+
+  /**
+   * STREAMS NATURAL SPOKEN HUMAN TTS VOICE DIRECTLY INTO WEBAUDIO DESTINATION & MEDIARECORDER
+   * Plays pre-loaded memory buffers instantly at t = 0.0s for crisp, immediate playback!
+   */
+  const playSpeechAudioTrackAsync = async (text, audioCtx, destNode, isMuted, preloadedBuffer = null) => {
     if (isMuted || !text || !String(text).trim()) {
       setIsSpeakingActive(false);
       await new Promise((r) => setTimeout(r, 1500));
@@ -553,6 +613,50 @@ export default function JsonToMp4({ setNotes }) {
     // 1. Speak out loud through local browser speaker for live preview
     speakNarrationDirect(cleanText);
 
+    // 2. Play PRE-LOADED INSTANT HUMAN VOICE AUDIO BUFFER if available in RAM!
+    if (preloadedBuffer && audioCtx && destNode) {
+      try {
+        if (audioCtx.state === 'suspended') {
+          await audioCtx.resume();
+        }
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = preloadedBuffer;
+
+        const compressor = audioCtx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
+        compressor.knee.setValueAtTime(30, audioCtx.currentTime);
+        compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+        compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+        compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.95, audioCtx.currentTime);
+
+        source.connect(compressor);
+        compressor.connect(gainNode);
+        gainNode.connect(destNode);
+
+        try {
+          gainNode.connect(audioCtx.destination);
+        } catch (e) {
+          // ignore
+        }
+
+        const durationMs = preloadedBuffer.duration * 1000;
+        await new Promise((resolve) => {
+          source.onended = resolve;
+          source.start(0);
+          setTimeout(resolve, durationMs + 200);
+        });
+
+        setIsSpeakingActive(false);
+        return;
+      } catch (e) {
+        console.warn('Error playing preloaded speech buffer:', e);
+      }
+    }
+
     const chunks = splitTextIntoChunks(cleanText, 130);
     for (let c = 0; c < chunks.length; c++) {
       const chunkText = chunks[c];
@@ -560,7 +664,7 @@ export default function JsonToMp4({ setNotes }) {
 
       let playedOk = false;
 
-      // 2. Fetch REAL HUMAN SPOKEN VOICE MP3 audio and decode into Web Audio PCM for MP4 recording
+      // 3. Fetch REAL HUMAN SPOKEN VOICE MP3 audio fallback
       if (audioCtx && destNode) {
         try {
           if (audioCtx.state === 'suspended') {
@@ -618,41 +722,11 @@ export default function JsonToMp4({ setNotes }) {
         }
       }
 
-      // 3. Smooth harmonic tone backup if offline (Smooth sine harmonic - ZERO BUZZING NOISE!)
+      // 4. Silent fallback pause if offline
       if (!playedOk && audioCtx && destNode) {
-        try {
-          if (audioCtx.state === 'suspended') await audioCtx.resume();
-          const words = chunkText.split(/\s+/).length;
-          const durationSec = Math.max(2.0, words * 0.4);
-          const now = audioCtx.currentTime;
-
-          const osc1 = audioCtx.createOscillator();
-          const osc2 = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-
-          osc1.type = 'sine';
-          osc2.type = 'sine';
-          osc1.frequency.setValueAtTime(220, now);
-          osc2.frequency.setValueAtTime(330, now);
-
-          gain.gain.setValueAtTime(0.01, now);
-          gain.gain.linearRampToValueAtTime(0.08, now + 0.15);
-          gain.gain.setValueAtTime(0.07, now + durationSec - 0.2);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + durationSec);
-
-          osc1.connect(gain);
-          osc2.connect(gain);
-          gain.connect(destNode);
-
-          osc1.start(now);
-          osc2.start(now);
-          osc1.stop(now + durationSec);
-          osc2.stop(now + durationSec);
-
-          await new Promise((r) => setTimeout(r, durationSec * 1000 + 150));
-        } catch (e) {
-          await new Promise((r) => setTimeout(r, 2000));
-        }
+        const words = chunkText.split(/\s+/).length;
+        const durationMs = Math.max(2000, words * 400);
+        await new Promise((r) => setTimeout(r, durationMs));
       }
 
       await new Promise((r) => setTimeout(r, 200));
@@ -1239,24 +1313,41 @@ export default function JsonToMp4({ setNotes }) {
         };
       });
 
+      // PRE-FETCH & PRE-DECODE ALL TTS SPEECH BUFFERS BEFORE STARTING MEDIARECORDER RECORDING!
+      // This ensures 0s delay when recording begins — speech starts INSTANTLY on frame 1 without buzzing!
+      const totalSteps = parsedData.steps.length;
+      const preloadedAudioBuffers = [];
+
+      for (let i = 0; i < totalSteps; i++) {
+        const stepProgress = Math.round(5 + ((i + 1) / totalSteps) * 20);
+        setConversionProgress(stepProgress);
+        const currentTitle = parsedData.steps[i].title || `Section ${i + 1}`;
+        setConversionStatusText(`Pre-loading speech clip ${i + 1} / ${totalSteps}: "${currentTitle}"...`);
+
+        const narrationText = parsedData.steps[i].narration || parsedData.steps[i].description || parsedData.steps[i].title;
+        const buffer = await fetchAndDecodeAudioBuffer(narrationText, audioCtx);
+        preloadedAudioBuffers.push(buffer);
+      }
+
+      setConversionProgress(28);
+      setConversionStatusText('All TTS speech tracks pre-loaded into RAM! Initializing MediaRecorder...');
+
       mediaRecorder.start(100);
 
-      const totalSteps = parsedData.steps.length;
-
-      // Loop through each slide section, speaking full sentences into destNode & encoding video!
+      // Loop through each slide section, speaking full pre-loaded sentences into destNode & encoding video!
       for (let i = 0; i < totalSteps; i++) {
         setCurrentStepIndex(i);
         drawCanvasFrame(i, parsedData);
 
-        const currentProgress = Math.round(15 + ((i + 1) / totalSteps) * 75);
+        const currentProgress = Math.round(30 + ((i + 1) / totalSteps) * 65);
         setConversionProgress(currentProgress);
         const currentTitle = parsedData.steps[i].title || `Section ${i + 1}`;
         setConversionStatusText(`Speaking & Encoding Section ${i + 1} / ${totalSteps}: "${currentTitle}"`);
 
         const narrationText = parsedData.steps[i].narration || parsedData.steps[i].description;
 
-        // EMBED REAL HUMAN SPOKEN VOICE AUDIO DIRECTLY INTO MEDIARECORDER DESTNODE STREAM!
-        await playSpeechAudioTrackAsync(narrationText, audioCtx, destNode, isAudioMuted);
+        // INSTANTLY EMBED PRE-LOADED HUMAN SPOKEN VOICE AUDIO DIRECTLY INTO MEDIARECORDER DESTNODE STREAM!
+        await playSpeechAudioTrackAsync(narrationText, audioCtx, destNode, isAudioMuted, preloadedAudioBuffers[i]);
       }
 
       setConversionProgress(95);
