@@ -582,10 +582,22 @@ export default function JsonToMp4({ setNotes }) {
                 const source = audioCtx.createBufferSource();
                 source.buffer = audioBuffer;
 
-                // Connect REAL HUMAN VOICE audio stream to destNode (for MP4 file recording) AND local speakers
-                source.connect(destNode);
+                const compressor = audioCtx.createDynamicsCompressor();
+                compressor.threshold.setValueAtTime(-20, audioCtx.currentTime);
+                compressor.knee.setValueAtTime(30, audioCtx.currentTime);
+                compressor.ratio.setValueAtTime(12, audioCtx.currentTime);
+                compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+                compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+
+                const gainNode = audioCtx.createGain();
+                gainNode.gain.setValueAtTime(0.95, audioCtx.currentTime);
+
+                source.connect(compressor);
+                compressor.connect(gainNode);
+                gainNode.connect(destNode);
+
                 try {
-                  source.connect(audioCtx.destination);
+                  gainNode.connect(audioCtx.destination);
                 } catch (e) {
                   // ignore
                 }
@@ -1179,8 +1191,9 @@ export default function JsonToMp4({ setNotes }) {
       try {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
         if (AudioCtxClass) {
-          audioCtx = new AudioCtxClass();
+          audioCtx = new AudioCtxClass({ sampleRate: 44100 });
           destNode = audioCtx.createMediaStreamDestination();
+          destNode.channelCount = 2;
           if (destNode.stream.getAudioTracks().length > 0) {
             audioTrack = destNode.stream.getAudioTracks()[0];
           }
@@ -1198,13 +1211,15 @@ export default function JsonToMp4({ setNotes }) {
 
       const compositeStream = new MediaStream(combinedTracks);
 
-      let options = { mimeType: 'video/webm;codecs=vp9' };
+      let options = { mimeType: 'video/webm;codecs=vp9,opus', audioBitsPerSecond: 128000, videoBitsPerSecond: 2500000 };
       if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2')) {
-        options = { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2' };
+        options = { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', audioBitsPerSecond: 128000, videoBitsPerSecond: 2500000 };
+      } else if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) {
+        options = { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', audioBitsPerSecond: 128000, videoBitsPerSecond: 2500000 };
       } else if (MediaRecorder.isTypeSupported('video/mp4')) {
-        options = { mimeType: 'video/mp4' };
-      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-        options = { mimeType: 'video/webm;codecs=h264' };
+        options = { mimeType: 'video/mp4', audioBitsPerSecond: 128000, videoBitsPerSecond: 2500000 };
+      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=h264,opus')) {
+        options = { mimeType: 'video/webm;codecs=h264,opus', audioBitsPerSecond: 128000, videoBitsPerSecond: 2500000 };
       }
 
       const mediaRecorder = new MediaRecorder(compositeStream, options);
